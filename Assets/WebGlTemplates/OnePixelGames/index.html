@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>{{{ PRODUCT_NAME }}}</title>
+    <link rel="shortcut icon" href="Data/favicon.ico">
+    <link rel="stylesheet" href="Data/style.css">
+
+    <!-- Yandex Games SDK -->
+    <script src="https://yandex.ru/games/sdk/v2"></script>
+</head>
+<body class="{{{ SPLASH_SCREEN_STYLE.toLowerCase() }}}">
+    <div id="unity-container" class="unity-desktop noselect" unselectable="on">
+        <canvas id="unity-canvas" class="unity-desktop noselect" unselectable="on"></canvas>
+    </div>
+    <div id="loading-cover" style="display:none;" class="noselect" unselectable="on">
+        <div id="unity-loading-bar" class="noselect" unselectable="on">
+            <div id="game-logo"><img src="game_logo.webp"/></div>
+            <div class="spinner"></div>
+            <div id="unity-progress-bar-empty" style="display: none;">
+                <div id="unity-progress-bar-full"></div>
+            </div>
+            <div id="percentage-text">0%</div>
+            <div id="studios-logo"><img src="studios_logo.webp" alt="Studios Logo"></div>
+            <div id="version-text">v.{{{ PRODUCT_VERSION }}}</div>
+        </div>
+    </div>
+
+    <script>
+        const buildUrl = "Build";
+        const loaderUrl = buildUrl + "/{{{ LOADER_FILENAME }}}";
+        const config = {
+            dataUrl: `${buildUrl}/{{{ DATA_FILENAME }}}`,
+            frameworkUrl: `${buildUrl}/{{{ FRAMEWORK_FILENAME }}}`,
+            codeUrl: `${buildUrl}/{{{ CODE_FILENAME }}}`,
+            #if MEMORY_FILENAME
+            memoryUrl: `${buildUrl}/{{{ MEMORY_FILENAME }}}`,
+            #endif
+            #if SYMBOLS_FILENAME
+            symbolsUrl: `${buildUrl}/{{{ SYMBOLS_FILENAME }}}`,
+            #endif
+            streamingAssetsUrl: "StreamingAssets",
+            companyName: "{{{ COMPANY_NAME }}}",
+            productName: "{{{ PRODUCT_NAME }}}",
+            productVersion: "{{{ PRODUCT_VERSION }}}"
+        };
+
+        const container = document.querySelector("#unity-container");
+        const canvas = document.querySelector("#unity-canvas");
+        const loadingCover = document.querySelector("#loading-cover");
+        const progressBarEmpty = document.querySelector("#unity-progress-bar-empty");
+        const progressBarFull = document.querySelector("#unity-progress-bar-full");
+        const spinner = document.querySelector('.spinner');
+        const percentageText = document.querySelector("#percentage-text");
+
+        // Detect mobile devices
+        var userAgent = navigator.userAgent;
+        isMobile = (
+            /\b(BlackBerry|webOS|iPhone|IEMobile)\b/i.test(userAgent) ||
+            /\b(Android|Windows Phone|iPad|iPod)\b/i.test(userAgent) ||
+            // iPad on iOS 13 detection
+            (userAgent.includes("Mac") && "ontouchend" in document)
+        );
+        if (isMobile) {
+            container.className = "unity-mobile";
+        }
+
+        // Loading cover
+        loadingCover.style.display = "";
+
+        // Focus on touch
+        canvas.addEventListener("touchstart", () => { window.focus() });
+        canvas.addEventListener("pointerdown", () => { window.focus() });
+
+        const script = document.createElement("script");
+        script.src = loaderUrl;
+        script.onload = () => {
+            createUnityInstance(canvas, config, (progress) => {
+                spinner.style.display = "none";
+                progressBarEmpty.style.display = "";
+                progressBarFull.style.width = `${100 * progress}%`;
+
+                percentageText.innerText = `${Math.round(100 * progress)}%`;
+            }).then((unityInstance) => {
+                myGameInstance = unityInstance;
+                loadingCover.style.display = "none";
+
+                clearInterval(window.backgroundIntervalId);
+
+                gameLoaded = true;
+            }).catch((message) => {
+                alert(message);
+            });
+        };
+
+        // Smooth background animation with preloading
+        const backgrounds = [
+            'Backgrounds/background_0.webp',
+        ];
+
+        function preloadImages(imageArray) {
+            const imagePromises = imageArray.map(src => {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.src = src;
+                    img.onload = resolve;
+                    img.onerror = reject;
+                });
+            });
+            return Promise.all(imagePromises);
+        }
+
+        preloadImages(backgrounds).then(() => {
+            let currentBackground = 0;
+            
+            if (backgrounds.length > 1) {
+                setInterval(() => {
+                    currentBackground = (currentBackground + 1) % backgrounds.length;
+                    canvas.style.background = `url("${backgrounds[currentBackground]}") center / cover`;
+                    canvas.style.transition = 'background 1s ease-in-out';
+                }, 2000);
+            }
+            else {
+                canvas.style.background = `url("${backgrounds[0]}") center / cover`;
+            }
+        }).catch(err => {
+            console.error("Failed to preload background images", err);
+        });
+
+        // Initialize game after load
+        window.onload = () => {
+            InitYandex();
+        };
+
+        // Yandex Games initialization
+        var player;
+        var lb;
+
+        function InitYandex() {
+            YaGames.init()
+                .then(ysdk => {
+                    console.log('Yandex SDK Initialized');
+                    window.ysdk = ysdk;
+
+                    InitPlayer();
+                    InitLb();
+
+                    ysdk.adv.showFullscreenAdv({
+                        callbacks: {
+                            onOpen: function () { },
+                            onClose: function (wasShown) { },
+                            onError: function (error) { }
+                        }
+                    });
+                });
+        }
+
+        function InitPlayer() {
+            ysdk.getPlayer({ scopes: true }).then(_player => {
+                console.log('Player Initialized');
+                player = _player;
+            });
+        }
+
+        function InitLb() {
+            ysdk.getLeaderboards()
+                .then(_lb => lb = _lb);
+            console.log('Leaderboard Initialized');
+        }
+
+        document.body.appendChild(script);
+    </script>
+</body>
+</html>

@@ -3,7 +3,7 @@ guid: ddd5a2b30466d4e4a8d2e077613cb758
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
-  serializedVersion: 12
+  serializedVersion: 13
   mipmaps:
     mipMapMode: 0
     enableMipMap: 0
@@ -84,7 +84,7 @@ TextureImporter:
     buildTarget: WebGL
     maxTextureSize: 2048
     resizeAlgorithm: 0
-    textureFormat: 3
+    textureFormat: 45
     textureCompression: 0
     compressionQuality: 50
     crunchedCompression: 0
